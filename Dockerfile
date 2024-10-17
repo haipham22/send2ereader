@@ -1,8 +1,5 @@
 # node 20 is lts at the time of writing
-FROM node:lts-alpine
-
-# Create app directory
-WORKDIR /usr/src/app
+FROM node:lts-alpine as base
 
 # Download and install kepubify
 RUN wget https://github.com/pgaskin/kepubify/releases/download/v4.0.4/kepubify-linux-64bit && \
@@ -16,7 +13,8 @@ RUN wget https://github.com/zzet/fp-docker/raw/f2b41fb0af6bb903afd0e429d5487acc6
     tar xvf kindlegen_linux_2.6_i386_v2_9.tar.gz --directory kindlegen && \
     cp kindlegen/kindlegen /usr/local/bin/kindlegen && \
     chmod +x /usr/local/bin/kindlegen && \
-    rm -rf kindlegen
+    rm -rf kindlegen && \
+    rm -rf kindlegen_linux_2.6_i386_v2_9.tar.gz
 
 RUN apk add --no-cache pipx
 
@@ -24,14 +22,28 @@ ENV PATH="$PATH:/root/.local/bin"
 
 RUN pipx install pdfCropMargins
 
+FROM base AS builder
+
+# Create app directory
+WORKDIR /usr/src/app
+
 # Copy files needed by npm install
 COPY package*.json ./
+COPY patches/* ./
 
 # Install app dependencies
-RUN npm install --omit=dev
+RUN npm ci --omit=dev --no-cache
 
 # Copy the rest of the app files (see .dockerignore)
 COPY . ./
+
+FROM builder AS prod
+
+ENV NODE_ENV=production
+
+COPY --chown=node:node --from=builder /usr/src/app/node_modules ./node_modules
+COPY --chown=node:node --from=builder /usr/src/app/package.json ./package.json
+COPY --chown=node:node --from=builder /usr/src/app/index.js ./index.js
 
 # Create uploads directory if it doesn't exist
 RUN mkdir uploads
