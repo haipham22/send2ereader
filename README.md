@@ -31,5 +31,5 @@ docker compose up -d
 
 ### Prebuild docker image
 1. Have Docker installed
-2. Run `$ docker run -p 3001:3001 haipham22/send2ereader`
+2. Run `$ docker run -p 3001:3001 ghcr.io/haipham22/send2ereader:buildcache`
 3. Access the service on HTTP, default port 3001 (http://localhost:3001)
